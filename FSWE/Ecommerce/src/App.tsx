@@ -39,7 +39,7 @@ function App() {
         dismissLoggedOutNotice
     } = useAutoLogout({
         timeoutMs: 60 * 1000, // 1 minute inactivity timeout
-        warningMs: 15 * 1000, // 15 seconds advance warning
+        warningMs: 20 * 1000, // 20 seconds advance warning
         onLogout: () => {
             setPage("signin");
         }

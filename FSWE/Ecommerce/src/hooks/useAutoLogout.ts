@@ -3,13 +3,13 @@ import { useAuthStore } from "../store/authStore";
 
 interface UseAutoLogoutOptions {
     timeoutMs?: number; // default: 60,000 ms (1 minute)
-    warningMs?: number; // default: 15,000 ms (15 seconds before logout)
+    warningMs?: number; // default: 20,000 ms (20 seconds before logout)
     onLogout?: () => void;
 }
 
 export function useAutoLogout({
     timeoutMs = 60 * 1000,
-    warningMs = 15 * 1000,
+    warningMs = 20 * 1000,
     onLogout
 }: UseAutoLogoutOptions = {}) {
     const user = useAuthStore((state) => state.user);
@@ -20,13 +20,16 @@ export function useAutoLogout({
 
     const lastActivityRef = useRef<number>(Date.now());
     const throttleTimeoutRef = useRef<any>(null);
+    const isWarningActiveRef = useRef<boolean>(false);
 
     const resetTimer = useCallback(() => {
+        isWarningActiveRef.current = false;
         lastActivityRef.current = Date.now();
         setRemainingSeconds(null);
     }, []);
 
     const performLogout = useCallback((isManual = false) => {
+        isWarningActiveRef.current = false;
         logout();
         setRemainingSeconds(null);
         if (!isManual) {
@@ -39,18 +42,26 @@ export function useAutoLogout({
 
     useEffect(() => {
         if (!user) {
+            isWarningActiveRef.current = false;
             setRemainingSeconds(null);
             return;
         }
 
         lastActivityRef.current = Date.now();
         setIsLoggedOutDueToInactivity(false);
+        isWarningActiveRef.current = false;
 
         const handleActivity = () => {
+            // When warning modal is showing, do NOT dismiss or reset on passive mouse movements!
+            // The modal will stay visible until the user explicitly clicks "Stay Logged In" or "Log Out Now",
+            // or until the countdown reaches 0 and logs out automatically.
+            if (isWarningActiveRef.current) {
+                return;
+            }
+
             const now = Date.now();
             if (!throttleTimeoutRef.current) {
                 lastActivityRef.current = now;
-                setRemainingSeconds((prev) => (prev !== null ? null : null));
                 throttleTimeoutRef.current = setTimeout(() => {
                     throttleTimeoutRef.current = null;
                 }, 500);
@@ -76,10 +87,13 @@ export function useAutoLogout({
             const timeLeft = timeoutMs - elapsed;
 
             if (timeLeft <= 0) {
+                isWarningActiveRef.current = false;
                 performLogout(false);
             } else if (timeLeft <= warningMs) {
-                setRemainingSeconds(Math.ceil(timeLeft / 1000));
+                isWarningActiveRef.current = true;
+                setRemainingSeconds(Math.max(1, Math.ceil(timeLeft / 1000)));
             } else {
+                isWarningActiveRef.current = false;
                 setRemainingSeconds(null);
             }
         }, 1000);

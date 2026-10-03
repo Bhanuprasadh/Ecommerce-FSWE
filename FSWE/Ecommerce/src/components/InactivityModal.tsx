@@ -31,7 +31,7 @@ export function InactivityModal({
                             <span className="countdown-label">seconds</span>
                         </div>
                         <p className="inactivity-hint">
-                            Move your mouse, press any key, or click below to stay signed in.
+                            Click <strong>"Stay Logged In"</strong> below to continue your session.
                         </p>
                         <div className="inactivity-actions">
                             <button
